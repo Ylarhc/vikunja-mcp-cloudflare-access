@@ -150,3 +150,47 @@ test('complete_task refuses recurring tasks before issuing a write', async () =>
   await assert.rejects(writer.completeTask({ task_id: 10 }), /recurring tasks/);
   assert.equal(writes, 0);
 });
+
+test('complete_task accepts unassigned tasks without reminders (Vikunja sends null)', async () => {
+  const client = fakeClient();
+  const getTask = client.getTask;
+  client.getTask = async (id) => {
+    const task = await getTask(id);
+    return task.done ? task : { ...task, assignees: null, reminders: null };
+  };
+  const updates = [];
+  const updateTask = client.updateTask;
+  client.updateTask = async (id, input) => { updates.push(input); return updateTask(id, input); };
+  const writer = handlers({ client, writeEnabled: true });
+  const result = await writer.completeTask({ task_id: 10 });
+  assert.equal(result.task.done, true);
+  assert.deepEqual(updates[0].assignees, []);
+  assert.deepEqual(updates[0].reminders, []);
+});
+
+test('create_task assigns the owner when autoAssignOwner is enabled', async () => {
+  const client = fakeClient();
+  const assigned = [];
+  client.addAssignee = async (taskId, userId) => { assigned.push([taskId, userId]); };
+  const result = await handlers({ client, writeEnabled: true, autoAssignOwner: true })
+    .createTask({ project_id: 7, title: 'Mine by default' });
+  assert.deepEqual(assigned, [[11, 1]]);
+  assert.equal(result.owner_assignment, 'assigned');
+
+  const off = await handlers({ client: fakeClient(), writeEnabled: true }).createTask({ project_id: 7, title: 'No auto' });
+  assert.equal('owner_assignment' in off, false);
+});
+
+test('update_task assign_to_owner skips tasks already assigned and reports failures', async () => {
+  const client = fakeClient();
+  const getTask = client.getTask;
+  client.getTask = async (id) => ({ ...await getTask(id), assignees: [{ id: 1 }] });
+  client.addAssignee = async () => { throw new Error('must not be called'); };
+  const already = await handlers({ client, writeEnabled: true }).updateTask({ task_id: 10, assign_to_owner: true });
+  assert.equal(already.owner_assignment, 'already_assigned');
+
+  const failing = fakeClient();
+  failing.addAssignee = async () => { throw new Error('forbidden'); };
+  const failed = await handlers({ client: failing, writeEnabled: true }).updateTask({ task_id: 10, assign_to_owner: true });
+  assert.equal(failed.owner_assignment, 'failed');
+});

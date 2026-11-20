@@ -32,7 +32,8 @@ function nullableDate(task, key) {
 }
 
 function userReferences(task) {
-  const assignees = requiredValue(task, 'assignees');
+  // Vikunja (Go) serialises an empty assignee list as null.
+  const assignees = requiredValue(task, 'assignees') ?? [];
   if (!Array.isArray(assignees) || assignees.some((user) => !Number.isSafeInteger(user?.id) || user.id <= 0)) {
     throw new TaskSerializationError('Task has invalid assignees.');
   }
@@ -40,7 +41,7 @@ function userReferences(task) {
 }
 
 function reminders(task) {
-  const value = requiredValue(task, 'reminders');
+  const value = requiredValue(task, 'reminders') ?? [];
   if (!Array.isArray(value)) throw new TaskSerializationError('Task has invalid reminders.');
   return value.map((reminder) => {
     if (!reminder || typeof reminder.reminder !== 'string') {

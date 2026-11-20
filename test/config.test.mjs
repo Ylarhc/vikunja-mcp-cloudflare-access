@@ -37,3 +37,8 @@ test('project owner is required only when writes are enabled', () => {
     VIKUNJA_MCP_OWNER_USER_ID: '',
   })), /VIKUNJA_MCP_OWNER_USER_ID is required/);
 });
+
+test('VIKUNJA_MCP_AUTO_ASSIGN_OWNER defaults to false and parses true', () => {
+  assert.equal(loadConfig(env()).autoAssignOwner, false);
+  assert.equal(loadConfig(env({ VIKUNJA_MCP_AUTO_ASSIGN_OWNER: 'true' })).autoAssignOwner, true);
+});

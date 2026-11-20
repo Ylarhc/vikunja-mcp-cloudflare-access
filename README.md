@@ -96,6 +96,7 @@ Cloudflare's current guidance: [Managed OAuth](https://developers.cloudflare.com
 | VIKUNJA_MCP_API_TOKEN_FILE | Preferred production secret-file path; takes precedence over VIKUNJA_MCP_API_TOKEN |
 | VIKUNJA_ALLOWED_PROJECT_IDS | Comma-separated project allowlist, or `all` for every project the integration user can access |
 | VIKUNJA_MCP_OWNER_USER_ID | Existing Vikunja user ID automatically given Admin access to new MCP-created projects |
+| VIKUNJA_MCP_AUTO_ASSIGN_OWNER | `true` to assign `VIKUNJA_MCP_OWNER_USER_ID` to every task created through MCP (default `false`). `update_task` also accepts `assign_to_owner: true` for existing tasks |
 | CF_ACCESS_ISSUER | Cloudflare Access team domain |
 | CF_ACCESS_AUDIENCE | Access application Audience tag |
 | CF_ACCESS_ALLOWED_EMAILS | Comma-separated origin allowlist |

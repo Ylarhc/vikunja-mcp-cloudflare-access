@@ -153,6 +153,11 @@ export class VikunjaClient {
     return (await this.request('update_task', 'POST', `/tasks/${taskId}`, task)).data;
   }
 
+  async addAssignee(taskId, userId) {
+    await this.getTask(taskId);
+    return (await this.request('add_assignee', 'PUT', `/tasks/${taskId}/assignees`, { user_id: userId })).data;
+  }
+
   async addLabel(taskId, labelId) {
     await this.getTask(taskId);
     return (await this.request('add_label', 'PUT', `/tasks/${taskId}/labels`, { label_id: labelId })).data;

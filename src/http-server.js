@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { AccessDeniedError } from './access-jwt.js';
 import { createMcpServer } from './mcp-server.js';
 
-export function createHttpApp({ client, validator, logger, writeEnabled, writeAllowedEmails, projectOwnerUserId, allowedOrigins = new Set() }) {
+export function createHttpApp({ client, validator, logger, writeEnabled, writeAllowedEmails, projectOwnerUserId, autoAssignOwner = false, allowedOrigins = new Set() }) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '256kb', type: ['application/json', 'application/*+json'] }));
@@ -42,7 +42,7 @@ export function createHttpApp({ client, validator, logger, writeEnabled, writeAl
     }
 
     try {
-      const server = createMcpServer({ client, logger, requestIdentity, writeEnabled, writeAllowedEmails, projectOwnerUserId });
+      const server = createMcpServer({ client, logger, requestIdentity, writeEnabled, writeAllowedEmails, projectOwnerUserId, autoAssignOwner });
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
       await server.connect(transport);
       await transport.handleRequest(request, response, request.body);

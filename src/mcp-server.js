@@ -90,7 +90,7 @@ export function createMcpServer(dependencies) {
 
   if (writesVisible) server.registerTool('update_task', {
     title: 'Update Vikunja task',
-    description: 'Update one task and optionally add or remove existing label assignments. Does not delete tasks or labels.',
+    description: 'Update one task, optionally add or remove existing label assignments, and optionally assign the configured owner. Does not delete tasks or labels.',
     inputSchema: {
       task_id: z.number().int().positive(),
       title: z.string().trim().min(1).max(500).optional(),
@@ -101,6 +101,7 @@ export function createMcpServer(dependencies) {
       labels_remove: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
       label_ids_add: z.array(z.number().int().positive()).max(12).optional(),
       label_ids_remove: z.array(z.number().int().positive()).max(12).optional(),
+      assign_to_owner: z.boolean().optional().describe('Add the configured owner as an assignee.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
   }, guarded(tools.updateTask));

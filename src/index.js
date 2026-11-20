@@ -28,6 +28,7 @@ const app = createHttpApp({
   writeEnabled: config.writeEnabled,
   writeAllowedEmails: config.writeAllowedEmails,
   projectOwnerUserId: config.projectOwnerUserId,
+  autoAssignOwner: config.autoAssignOwner,
   allowedOrigins: config.allowedOrigins,
 });
 

@@ -119,5 +119,6 @@ export function loadConfig(env = process.env) {
     allowedOrigins: originSet(env.MCP_ALLOWED_ORIGINS),
     writeEnabled,
     writeAllowedEmails,
+    autoAssignOwner: booleanValue('VIKUNJA_MCP_AUTO_ASSIGN_OWNER', env.VIKUNJA_MCP_AUTO_ASSIGN_OWNER, false),
   };
 }

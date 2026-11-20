@@ -101,7 +101,20 @@ async function applyLabels(client, taskId, labels, operation) {
   return { assigned, failed, partial_success: failed.length > 0 };
 }
 
-export function createToolHandlers({ client, logger, requestIdentity, writeEnabled, writeAllowedEmails, projectOwnerUserId }) {
+export function createToolHandlers({ client, logger, requestIdentity, writeEnabled, writeAllowedEmails, projectOwnerUserId, autoAssignOwner = false }) {
+  // Adds the configured owner as assignee unless already assigned. Returns
+  // 'assigned' | 'already_assigned' | 'failed'; never throws.
+  async function assignOwner(task) {
+    if ((task.assignees || []).some((user) => user.id === projectOwnerUserId)) return 'already_assigned';
+    try {
+      await client.addAssignee(task.id, projectOwnerUserId);
+      return 'assigned';
+    } catch {
+      logger.event('tool_partial_failure', { tool: 'assign_owner', task_id: task.id });
+      return 'failed';
+    }
+  }
+
   async function listProjects() {
     const result = listResult(await client.listProjects());
     return {
@@ -164,6 +177,7 @@ export function createToolHandlers({ client, logger, requestIdentity, writeEnabl
       ...(input.due_date === undefined ? {} : { due_date: input.due_date }),
     });
     const labelResult = await applyLabels(client, task.id, labels, (label) => client.addLabel(task.id, label.id));
+    const ownerAssignment = autoAssignOwner ? await assignOwner(task) : undefined;
     const verified = await client.getTask(task.id);
     const verifiedLabels = await taskLabels(client, verified);
     logger.event('tool_completed', { tool: 'create_task', task_id: verified.id, project_id: project.id, partial_success: labelResult.partial_success });
@@ -172,6 +186,7 @@ export function createToolHandlers({ client, logger, requestIdentity, writeEnabl
       task: taskSummary(verified, verifiedLabels.items),
       labels: labelResult,
       labels_truncated: Boolean(verifiedLabels.truncated),
+      ...(ownerAssignment ? { owner_assignment: ownerAssignment } : {}),
     };
   }
 
@@ -200,7 +215,7 @@ export function createToolHandlers({ client, logger, requestIdentity, writeEnabl
     ensureWriter({ requestIdentity, writeEnabled, writeAllowedEmails });
     if (input.title === undefined && input.description === undefined && input.priority === undefined
       && input.due_date === undefined && !input.labels_add?.length && !input.labels_remove?.length
-      && !input.label_ids_add?.length && !input.label_ids_remove?.length) {
+      && !input.label_ids_add?.length && !input.label_ids_remove?.length && !input.assign_to_owner) {
       throw new ToolInputError('At least one task field or label change is required.');
     }
     noDuplicates(input.labels_add || []);
@@ -230,10 +245,16 @@ export function createToolHandlers({ client, logger, requestIdentity, writeEnabl
       await applyLabels(client, input.task_id, labelsToRemove.filter((label) => currentIds.has(label.id)), (label) => client.removeLabel(input.task_id, label.id));
     }
 
+    const ownerAssignment = input.assign_to_owner ? await assignOwner(await client.getTask(input.task_id)) : undefined;
+
     const verified = await client.getTask(input.task_id);
     const verifiedLabels = await taskLabels(client, verified);
     logger.event('tool_completed', { tool: 'update_task', task_id: verified.id });
-    return { task: taskSummary(verified, verifiedLabels.items), labels_truncated: Boolean(verifiedLabels.truncated) };
+    return {
+      task: taskSummary(verified, verifiedLabels.items),
+      labels_truncated: Boolean(verifiedLabels.truncated),
+      ...(ownerAssignment ? { owner_assignment: ownerAssignment } : {}),
+    };
   }
 
   async function completeTask({ task_id }) {
